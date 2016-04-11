@@ -43,8 +43,8 @@ namespace PV {
 	                                 "c = a / b;",
 	                                 "c = a % b;",
 	                                 "b = -a;",
-	                                 "b = ++a;",
-	                                 "b = --a;",
+	                                 "b = a + 1;",
+	                                 "b = a - 1;",
 	                                 "c = (a == b);",
 	                                 "c = (a != b);",
 	                                 "c = (a > b);",
@@ -90,7 +90,7 @@ namespace PV {
 		if (!initialized) {
 			opencl_context = cl::Context(CL_DEVICE_TYPE_GPU);
 			opencl_devices = opencl_context.getInfo<CL_CONTEXT_DEVICES>();
-			opencl_queue = cl::CommandQueue(opencl_context, opencl_devices[0]);
+			opencl_queue = cl::CommandQueue(opencl_context, opencl_devices[1]);
 			initialized = true;
 		}
 	}
@@ -113,12 +113,12 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T1_str, T2_str, T3_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program = cl::Program(opencl_context, kernel_source);
+				program = cl::Program(std::string(kernel_code), false);
 				program.build();
 			} catch (cl::Error & err) {
 				// debugging code from stackoverflow
 				char log[10000];
-				program.getBuildInfo(opencl_devices[0], CL_PROGRAM_BUILD_LOG, log);
+				program.getBuildInfo(opencl_devices[1], CL_PROGRAM_BUILD_LOG, log);
 				//cl::clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, 10000, log, NULL);
 				printf("%s\n", log);
 
@@ -128,7 +128,12 @@ namespace PV {
 			initialized = true;
 		}
 		
-		(cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel))(cl::EnqueueArgs(size), aa, bb, cc);
+		//(cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel))(cl::EnqueueArgs(size), aa, bb, cc);
+		cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel))(cl::EnqueueArgs(size), aa, bb, cc);
+		//cl::CommandQueue queue(opencl_context, opencl_devices[1], 0, NULL);
+		//queue.enqueueNDRangeKernel((cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel))(cl::EnqueueArgs(size), aa, bb, cc),
+		//                           cl::NullRange, cl::NDRange(size), cl::NullRange, NULL, &event);
+		event.wait();
 	}
 	
 	template<typename T1, typename T2>
@@ -152,7 +157,7 @@ namespace PV {
 			} catch (cl::Error & err) {
 				// debugging code from stackoverflow
 				char log[10000];
-				program.getBuildInfo(opencl_devices[0], CL_PROGRAM_BUILD_LOG, log);
+				program.getBuildInfo(opencl_devices[1], CL_PROGRAM_BUILD_LOG, log);
 				//cl::clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, 10000, log, NULL);
 				printf("%s\n", log);
 
@@ -167,7 +172,7 @@ namespace PV {
 	
 	template<typename T>
 	cl::Buffer toBuffer(std::vector<T> & vec) {
-		return cl::Buffer(opencl_queue, vec.begin(), vec.end(), false, false);
+		return cl::Buffer(vec.begin(), vec.end(), false, false);
 	}
 	
 	template<typename T>
@@ -177,7 +182,7 @@ namespace PV {
 	
 	template<typename T>
 	cl::Buffer getEmptyBuffer(size_type size) {
-		return cl::Buffer(opencl_context, CL_MEM_READ_WRITE, size * sizeof(T));
+		return cl::Buffer(CL_MEM_READ_WRITE, size * sizeof(T));
 	}
 	
 	template<typename T1, typename T2, typename T3>
