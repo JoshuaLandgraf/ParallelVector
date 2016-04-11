@@ -2,13 +2,15 @@
 
 #include <iostream>
 #include <vector>
-#include "ParallelVector.h"
+#include "ParallelVector.hpp"
 
 int main(int argc, char *argv[]) {
+	try {
 	PV::Vector<int> vec1(10,1);
 	
 	// arithmetic tests
 	PV::Vector<int> vec2 = vec1 + vec1;
+	printf("here\n");
 	PV::Vector<int> vec4 = vec2 * vec2;
 	PV::Vector<int> vec3 = vec4 - vec1;
 	PV::Vector<int> vec6 = (vec4 * vec4 - vec4) / vec2;
@@ -46,4 +48,8 @@ int main(int argc, char *argv[]) {
 	PV::Vector<int> vecNeg1 = ~vec0;
 	
 	printf("%d %d %d %d\n0 0 1 -1\n", vec0[0], vec01[1], vec001[2], vecNeg1[3]);
+	} catch (char const * error) {
+		printf("[Error] %s\n", error);
+		exit(1);
+	}
 }

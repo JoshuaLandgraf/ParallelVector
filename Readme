@@ -1,0 +1,9 @@
+# build on OS X
+clang++ -o example example.cpp -framework OpenCL
+
+# run with
+./example
+
+# for extra OpenCL debgging info, run as
+CL_LOG_ERRORS=stdout ./example
+
