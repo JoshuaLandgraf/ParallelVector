@@ -2,53 +2,157 @@
 
 #include <iostream>
 #include <vector>
+#include <assert.h>
 #include "ParallelVector.hpp"
 
 int main(int argc, char *argv[]) {
 	try {
-	PV::Vector<int> vec1(10000000,1);
-	
-	// arithmetic tests
-	PV::Vector<int> vec2 = vec1 + vec1;
-	PV::Vector<int> vec4 = vec2 * vec2;
-	PV::Vector<int> vec3 = vec4 - vec1;
-	PV::Vector<int> vec6 = (vec4 * vec4 - vec4) / vec2;
-	PV::Vector<int> vec5 = (vec4 * vec3 - vec1) % vec6;
-	PV::Vector<int> vecI1(10000000);
-	for (int i = 0; i < vecI1.size(); ++i) vecI1[i] = i;
-	PV::Vector<int> vecI2 = vecI1++;
-	PV::Vector<int> vecI3 = --vecI1;
-	PV::Vector<int> vecI4 = ++vecI1;
-	PV::Vector<int> vecI5 = vec1 + vecI1--;
-	vecI5 -= vec1;
-	PV::Vector<int> vecI6 = (vecI5 += vec2);
-	vecI5 -= vec1;
-	
-	printf("%d %d %d %d %d %d %d %d %d %d %d %d\n1 2 3 4 5 6 7 8 9 10 11 12\n", vec1[0], vec2[1], vec3[2], vec4[3], vec5[4], vec6[5], vecI1[7], vecI2[8], vecI3[9], vecI4[9], vecI5[9], vecI6[9]);
-	
-	// comparison and logical tests
-	PV::Vector<bool> vecB1 = vec1 == vec1;
-	PV::Vector<bool> vecB2 = vec1 != vec1;
-	PV::Vector<bool> vecB3 = vec2 > vec1;
-	PV::Vector<bool> vecB4 = vec2 < vec1;
-	PV::Vector<bool> vecB5 = vec3 >= vec2;
-	PV::Vector<bool> vecB6 = vec3 <= vec2;
-	
-	PV::Vector<bool> vecB7 = vecB1 && vecB2;
-	PV::Vector<bool> vecB8 = vecB1 || vecB2;
-	PV::Vector<bool> vecB9 = !vecB3;
-	
-	printf("%d %d %d %d %d %d %d %d %d\n1 0 1 0 1 0 0 1 0\n", vecB1.at(0), vecB2.at(1), vecB3.at(2), vecB4.at(3), vecB5.at(4), vecB6.at(5), vecB7.at(6), vecB8.at(7), vecB9.at(8));
-	
-	// bitwise tests
-	PV::Vector<int> vec0 = vec1 ^ vec1;
-	PV::Vector<int> vec01 = vec1 & vec2;
-	PV::Vector<int> vec001 = vec1 | vec0;
-	PV::Vector<int> vecNeg1 = ~vec0;
-	
-	printf("%d %d %d %d\n0 0 1 -1\n", vec0[0], vec01[1], vec001[2], vecNeg1[3]);
+		const unsigned test_size = 1000000;
+		
+		// test constructors
+		{
+			PV::Vector<int> test1 = PV::Vector<int>();
+			PV::Vector<int> test2(test_size);
+			PV::Vector<int> test3(test_size, 0);
+			assert(test3[0] == 0);
+			std::vector<int> nums(test_size, 1);
+			PV::Vector<int> test4(nums.begin(), nums.end());
+			assert(test4[1] == 1);
+			PV::Vector<int> test5(&nums[0], nums.size());
+			assert(test5[2] == 1);
+			PV::Vector<int> test6(test5);
+			assert(test6[3] == 1);
+			PV::Vector<int> test7(nums);
+			PV::Vector<int> test8(test7);
+			assert(test8[4] == 1);
+		}
+		
+		// test operations on numbers
+		{
+			PV::Vector<int> ones(test_size, 1);
+			PV::Vector<int> twos(test_size, 2);
+			PV::Vector<int> threes(test_size, 3);
+			PV::Vector<int> eights(test_size, 8);
+			
+			// arithmetic
+			PV::Vector<int> test1 = ones + twos;
+			assert(test1[0] == 3);
+			PV::Vector<int> test2 = threes - twos;
+			assert(test2[1] == 1);
+			PV::Vector<int> test3 = twos * threes;
+			assert(test3[2] == 6);
+			PV::Vector<int> test4 = eights / twos;
+			assert(test4[3] == 4);
+			PV::Vector<int> test5 = threes % twos;
+			assert(test5[4] == 1);
+			PV::Vector<int> test6 = -ones;
+			assert(test6[5] == -1);
+			PV::Vector<int> test7 = ones;
+			PV::Vector<int> test7_2 = test7++;
+			assert(test7[6] == 2);
+			assert(test7_2[6] == 1);
+			PV::Vector<int> test8 = ones; ++test8;
+			assert(test8[7] == 2);
+			PV::Vector<int> test9 = ones;
+			PV::Vector<int> test9_2 = test9--;
+			assert(test9[8] == 0);
+			assert(test9_2[8] == 1);
+			PV::Vector<int> test10 = ones; --test10;
+			assert(test10[9] == 0);
+			PV::Vector<int> test11 = ones; test11 += ones;
+			assert(test11[10] == 2);
+			PV::Vector<int> test12 = ones; test12 -= ones;
+			assert(test12[11] == 0);
+			PV::Vector<int> test13 = twos; test13 *= threes;
+			assert(test13[12] == 6);
+			PV::Vector<int> test14 = eights; test14 /= twos;
+			assert(test14[13] == 4);
+			
+			// comparisons
+			PV::Vector<bool> test15 = ones == twos;
+			assert(test15[14] == false);
+			PV::Vector<bool> test16 = ones != twos;
+			assert(test16[15] == true);
+			PV::Vector<bool> test17 = ones > twos;
+			assert(test17[16] == false);
+			PV::Vector<bool> test18 = ones < twos;
+			assert(test18[17] == true);
+			PV::Vector<bool> test19 = ones >= twos;
+			assert(test19[18] == false);
+			PV::Vector<bool> test20 = ones <= twos;
+			assert(test20[19] == true);
+			
+			// bitwise
+			PV::Vector<int> test21 = ones & threes;
+			assert(test21[20] == 1);
+			PV::Vector<int> test22 = ones; test22 &= threes;
+			assert(test22[21] == 1);
+			PV::Vector<int> test23 = ones | twos;
+			assert(test23[22] == 3);
+			PV::Vector<int> test24 = ones; test24 |= twos;
+			assert(test24[23] == 3);
+			PV::Vector<int> test25 = ones ^ ones;
+			assert(test25[24] == 0);
+			PV::Vector<int> test26 = ones; test26 ^= ones;
+			assert(test26[25] == 0);
+			PV::Vector<int> test27 = ~ones;
+			assert(test27[26] == -2);
+			PV::Vector<int> test28 = ones << ones;
+			assert(test28[27] == 2);
+			PV::Vector<int> test29 = ones; test29 <<= ones;
+			assert(test29[28] == 2);
+			PV::Vector<int> test30 = twos >> ones;
+			assert(test30[29] == 1);
+			PV::Vector<int> test31 = twos; test31 >>= ones;
+			assert(test31[30] == 1);
+			
+			// ternary
+			PV::Vector<int> test32 = (ones == twos).choose(ones, twos);
+			assert(test32[31] == 2);
+		}
+		
+		// test operations on bools
+		{
+			PV::Vector<bool> falses(test_size, false);
+			PV::Vector<bool> trues(test_size, true);
+			
+			PV::Vector<bool> test1 = falses && trues;
+			assert(test1[0] == false);
+			PV::Vector<bool> test2 = falses || trues;
+			assert(test2[1] == true);
+			PV::Vector<bool> test3 = !falses;
+			assert(test3[2] == true);
+		}
+		
+		// test operations on datatypes?
+		
+		// test other operations
+		{
+			PV::Vector<int> nums(test_size);
+			assert(nums.size() == test_size);
+			nums.set(0,1);
+			assert(nums[0] == 1);
+			assert(nums.at(0) == 1);
+			nums.reserve(test_size+1);
+			nums.resize(test_size+1);
+			assert(nums[0] == 1);
+			assert(nums.at(0) == 1);
+			nums.set(test_size,2);
+			assert(nums[test_size] == 2);
+			assert(nums.at(test_size) == 2);
+			assert(nums.front() == 1);
+			assert(nums.back() == 2);
+			nums.pop_back();
+			assert(nums.size() == test_size);
+			nums.push_back(3);
+			assert(nums.size() == test_size + 1);
+			assert(nums.back() == 3);
+		}
+		
 	} catch (char const * error) {
 		printf("[Error] %s\n", error);
 		exit(1);
 	}
+	
+	printf("Tests completed successfully!\n");
 }
