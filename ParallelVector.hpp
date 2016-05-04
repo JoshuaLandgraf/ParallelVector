@@ -107,7 +107,7 @@ namespace PV {
 			if (err != CL_SUCCESS) CPU_available = false;
 			
 			err = CL_SUCCESS;
-			GPU_available = true;
+			GPU_available = false;
 			GPU_context = cl::Context(CL_DEVICE_TYPE_GPU, nullptr, nullptr, &err);
 			if (err != CL_SUCCESS) GPU_available = false;
 			else {
@@ -327,8 +327,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T1_str, T2_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program[op].build();
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -369,8 +368,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T1_str, T2_str, T3_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program[op].build();
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -413,8 +411,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T4_str, T1_str, T2_str, T3_str, T4_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program[op].build();
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -453,8 +450,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T_str, T_str, T_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program[op].build();
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -505,8 +501,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T_str, T_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program.build();
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -540,8 +535,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T_str, T_str, "%");
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program.build();
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -573,8 +567,7 @@ namespace PV {
 			sprintf(kernel_code, starting_kernel_code, T_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program.build();
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), true);
 			} catch (cl::Error & err) {
 				throw "Error encountered during OpenCL compilation";
 			}
@@ -624,6 +617,17 @@ namespace PV {
 			
 			// move constructor
 			Vector(const Vector&& vec) : data(cl.move_buffer<T>(vec.data)), num_filled(vec.num_filled), num_allocated(vec.num_allocated), initialized(vec.initialized) {};
+			
+			// copy assignment
+			Vector<T> & operator=(const Vector<T>& vec) {
+				initialized = vec.initialized;
+				if (vec.initialized) {
+					data = cl.duplicate_buffer<T>(vec.data, vec.num_filled, vec.num_allocated);
+					num_filled = vec.num_filled;
+					num_allocated = vec.num_allocated;
+				}
+				return get_this();
+			};
 			
 			// OPERATORS
 			// data accessor(s)

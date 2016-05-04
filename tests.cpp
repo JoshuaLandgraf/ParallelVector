@@ -28,6 +28,9 @@ int main(int argc, char *argv[]) {
 			PV::Vector<int> test7(nums);
 			PV::Vector<int> test8(test7);
 			assert(test8[4] == 1);
+			PV::Vector<int> test9;
+			test9 = test8;
+			assert(test9[5] == 1);
 			
 			// getters
 			assert(test3.get(0) == 0);
@@ -39,15 +42,15 @@ int main(int argc, char *argv[]) {
 			assert(nums2[2] == 1);
 			
 			// setters
-			PV::Vector<int> test9(test_size);
-			test9.set(0, 1);
-			assert(test9[0] == 1);
-			test9.set(1, nums.begin(), nums.begin()+1);
-			assert(test9[1] == 1);
-			test9.set(2, &nums[0], 1);
-			assert(test9[2] == 1);
-			test9.set(0, nums);
-			assert(test9[3] == 1);
+			PV::Vector<int> test10(test_size);
+			test10.set(0, 1);
+			assert(test10[0] == 1);
+			test10.set(1, nums.begin(), nums.begin()+1);
+			assert(test10[1] == 1);
+			test10.set(2, &nums[0], 1);
+			assert(test10[2] == 1);
+			test10.set(0, nums);
+			assert(test10[3] == 1);
 		}
 		
 		// test operations on numbers

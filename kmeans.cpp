@@ -5,7 +5,7 @@
 #include "ParallelVector.hpp"
 
 int main(int argc, char *argv[]) {
-	const unsigned num_points = 100000;
+	const unsigned num_points = 1000000;
 	const unsigned num_iterations = 10;
 	
 	// generate random points
