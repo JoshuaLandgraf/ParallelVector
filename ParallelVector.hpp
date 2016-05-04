@@ -69,6 +69,12 @@ namespace PV {
 	                                 "d = a ? b : c;",
 		                             "b = a;"};
 	
+	enum reduce_operation {reduce_plus, reduce_times, num_reduce_ops};
+	const char* const reduce_op_to_str[] = {"+=", "*="};
+	
+	enum rotate_operation {rotate_left, rotate_right, num_rotate_ops};
+	const char* const rotate_op_to_str[] = {"(i + size - 1) \% size", "(i + 1) \% size"};
+	
 	// catch supported data types and convert to opencl-supported string
 	template<typename T> static const char* typeToStr() { throw "Unsupported PV::Vector datatype"; return nullptr; }
 	template<> const char* typeToStr<bool>() { return "bool"; }
@@ -84,6 +90,7 @@ namespace PV {
 	template<> const char* typeToStr<long long>() { return "long"; }
 	template<> const char* typeToStr<unsigned long long>() { return "unsigned long"; }
 	template<> const char* typeToStr<float>() { return "float"; }
+	//template<> const char* typeToStr<double>() { return "double"; }   // not supported by all devices
 	
 	// forward declare function(s)
 	template<typename T1, typename T2>
@@ -146,21 +153,17 @@ namespace PV {
 			} else throw "error filling CPU buffer";
 		}
 		template<class iterator_type>
-		cl::Buffer CPU_buffer(iterator_type start, iterator_type end) {
-			typedef typename std::iterator_traits<iterator_type>::value_type T;
-			cl::Buffer buffer = CPU_buffer<T>(sizeof(T)*(end-start));
-			cl::Event event;
-			cl_int err = cl::copy(get_CPU_queue(), start, end, buffer);
+		cl::Buffer CPU_buffer_iter(iterator_type begin, iterator_type end) {
+			cl_int err = CL_SUCCESS;
+			cl::Buffer buffer = cl::Buffer(get_CPU_queue(), begin, end, false, false, &err);
 			if (err == CL_SUCCESS) {
 				return buffer;
-			} else throw "error creating CPU buffer from iterators";
+			} else throw "error creating GPU buffer from iterators";
 		}
 		template<class iterator_type>
-		cl::Buffer GPU_buffer(iterator_type start, iterator_type end) {
-			typedef typename std::iterator_traits<iterator_type>::value_type T;
-			cl::Buffer buffer = GPU_buffer<T>(sizeof(T)*(end-start));
-			cl::Event event;
-			cl_int err = cl::copy(get_GPU_queue(), start, end, buffer);
+		cl::Buffer GPU_buffer_iter(iterator_type begin, iterator_type end) {
+			cl_int err = CL_SUCCESS;
+			cl::Buffer buffer = cl::Buffer(get_GPU_queue(), begin, end, false, false, &err);
 			if (err == CL_SUCCESS) {
 				return buffer;
 			} else throw "error creating GPU buffer from iterators";
@@ -192,52 +195,96 @@ namespace PV {
 		}
 		
 		template<typename T>
-		void from_CPU_buffer(cl::Buffer & buf, std::vector<T> & vec) {
-			cl::copy(get_CPU_queue(), buf, vec.begin(), vec.end());
+		cl::Buffer get_sub_buffer(cl::Buffer & buf, size_type start, size_type size) {
+			cl_buffer_region region;
+			region.origin = start * sizeof(T);
+			region.size = size * sizeof(T);
+			cl_int err = CL_SUCCESS;
+			cl::Buffer sub_buf = buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
+			if (err != CL_SUCCESS) throw "error accessing GPU buffer";
+			return sub_buf;
+		}
+		
+		template<typename T>
+		void from_CPU_buffer(cl::Buffer & buf, size_type start, std::vector<T> & vec) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, vec.size());
+			cl::copy(get_CPU_queue(), sub_buf, vec.begin(), vec.end());
 		}
 		template<typename T>
-		void from_GPU_buffer(cl::Buffer & buf, std::vector<T> & vec) {
-			cl::copy(get_GPU_queue(), buf, vec.begin(), vec.end());
+		void from_GPU_buffer(cl::Buffer & buf, size_type start, std::vector<T> & vec) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, vec.size());
+			cl::copy(get_GPU_queue(), sub_buf, vec.begin(), vec.end());
 		}
 		template<typename T>
-		void from_CPU_buffer(cl::Buffer & buf, T * data, size_type size) {
-			cl::copy(get_CPU_queue(), buf, data, data + size);
+		void from_CPU_buffer(cl::Buffer & buf, size_type start, T * data, size_type size) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, size);
+			cl::copy(get_CPU_queue(), sub_buf, data, data + size);
 		}
 		template<typename T>
-		void from_GPU_buffer(cl::Buffer & buf, T * data, size_type size) {
-			cl::copy(get_GPU_queue(), buf, data, data + size);
+		void from_GPU_buffer(cl::Buffer & buf, size_type start, T * data, size_type size) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, size);
+			cl::copy(get_GPU_queue(), sub_buf, data, data + size);
+		}
+		template<class iterator_type>
+		void from_CPU_buffer(cl::Buffer & buf, size_type start, iterator_type begin, iterator_type end) {
+			typedef typename std::iterator_traits<iterator_type>::value_type T;
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, end-begin);
+			cl::copy(get_CPU_queue(), sub_buf, begin, end);
+		}
+		template<class iterator_type>
+		void from_GPU_buffer(cl::Buffer & buf, size_type start, iterator_type begin, iterator_type end) {
+			typedef typename std::iterator_traits<iterator_type>::value_type T;
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, end-begin);
+			cl::copy(get_GPU_queue(), sub_buf, begin, end);
+		}
+		template<typename T>
+		void to_CPU_buffer(cl::Buffer & buf, size_type start, std::vector<T> & vec) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, vec.size());
+			cl::copy(get_CPU_queue(), vec.begin(), vec.end(), buf);
+		}
+		template<typename T>
+		void to_GPU_buffer(cl::Buffer & buf, size_type start, std::vector<T> & vec) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, vec.size());
+			cl::copy(get_GPU_queue(), vec.begin(), vec.end(), sub_buf);
+		}
+		template<typename T>
+		void to_CPU_buffer(cl::Buffer & buf, size_type start, T * data, size_type size) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, size);
+			cl::copy(get_CPU_queue(), data, data + size, sub_buf);
+		}
+		template<typename T>
+		void to_GPU_buffer(cl::Buffer & buf, size_type start, T * data, size_type size) {
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, size);
+			cl::copy(get_GPU_queue(), data, data + size, sub_buf);
+		}
+		template<class iterator_type>
+		void to_CPU_buffer(cl::Buffer & buf, size_type start, iterator_type begin, iterator_type end) {
+			typedef typename std::iterator_traits<iterator_type>::value_type T;
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, end-begin);
+			cl::copy(get_CPU_queue(), begin, end, sub_buf);
+		}
+		template<class iterator_type>
+		void to_GPU_buffer(cl::Buffer & buf, size_type start, iterator_type begin, iterator_type end) {
+			typedef typename std::iterator_traits<iterator_type>::value_type T;
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, start, end-begin);
+			cl::copy(get_GPU_queue(), begin, end, sub_buf);
 		}
 		
 		template<typename T>
 		void set_CPU_buffer_index(cl::Buffer & buf, size_type index, T val) {
-			cl_buffer_region region;
-			region.origin = index * sizeof(T);
-			region.size = sizeof(T);
-			cl_int err = CL_SUCCESS;
-			cl::Buffer subBuf = buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
-			if (err != CL_SUCCESS) throw "error accessing GPU buffer";
-			cl::copy(get_CPU_queue(), &val, &val + 1, subBuf);
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, index, 1);
+			cl::copy(get_CPU_queue(), &val, &val + 1, sub_buf);
 		}
 		template<typename T>
 		void set_GPU_buffer_index(cl::Buffer & buf, size_type index, T val) {
-			cl_buffer_region region;
-			region.origin = index * sizeof(T);
-			region.size = sizeof(T);
-			cl_int err = CL_SUCCESS;
-			cl::Buffer subBuf = buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
-			if (err != CL_SUCCESS) throw "error accessing GPU buffer";
-			cl::copy(get_GPU_queue(), &val, &val + 1, subBuf);
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, index, 1);
+			cl::copy(get_GPU_queue(), &val, &val + 1, sub_buf);
 		}
 		template<typename T>
 		T get_GPU_buffer_index(cl::Buffer & buf, size_type index) {
-			cl_buffer_region region;
-			region.origin = index * sizeof(T);
-			region.size = sizeof(T);
-			cl_int err = CL_SUCCESS;
-			cl::Buffer subBuf = buf.createSubBuffer(CL_MEM_READ_WRITE, CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
-			if (err != CL_SUCCESS) throw "error accessing GPU buffer";
+			cl::Buffer sub_buf = get_sub_buffer<T>(buf, index, 1);
 			T val;
-			cl::copy(get_GPU_queue(), subBuf, &val, &val + 1);
+			cl::copy(get_GPU_queue(), sub_buf, &val, &val + 1);
 			return val;
 		}
 		
@@ -255,42 +302,17 @@ namespace PV {
 	
 	opencl_helper cl;
 	
-	template<typename T1, typename T2, typename T3>
-	void parallel_compute(cl::Buffer & aa, const cl::Buffer & bb, cl::Buffer & cc, size_type size, enum operation op) {
-		static const char* const starting_kernel_code = "__kernel void opencl_compute(global %s * aa, global %s * bb, global %s * cc) { const size_t i = get_global_id(0); const %s a = aa[i]; const %s b = bb[i]; %s c; %s cc[i] = c; }";
-		
-		static cl::Program program[num_ops];
-		static cl::Kernel kernel[num_ops];
-		static bool initialized[num_ops];
-		cl_int err = CL_SUCCESS;
-		if (!initialized[op]) {
-			const char *T1_str = typeToStr<T1>();
-			const char *T2_str = typeToStr<T2>();
-			const char *T3_str = typeToStr<T3>();
-			if (T1_str == nullptr || T2_str == nullptr || T3_str == nullptr) throw "Unsupported type in computation";
-			const char *op_str = op_to_str[op];
-			//printf("%s\n", op_str);
-			char kernel_code[600];
-			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T1_str, T2_str, T3_str, op_str);
-			try {
-				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
-				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
-				program[op].build();
-			} catch (cl::Error & err) {
-				throw "Error encountered during OpenCL compilation";
-			}
-			kernel[op] = cl::Kernel(program[op], "opencl_compute");
-			initialized[op] = true;
-		}
-		
-		cl::CommandQueue queue = cl.get_GPU_queue();
-		cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel[op]))(cl::EnqueueArgs(queue, cl::NDRange(size)), aa, bb, cc);
-		event.wait();
-	}
-	
 	template<typename T1, typename T2>
 	void parallel_compute(cl::Buffer & aa, cl::Buffer & bb, size_type size, enum operation op) {
-		static const char* const starting_kernel_code = "kernel void opencl_compute(global %s * aa, global %s * bb) { const size_t i = get_global_id(0); const %s a = aa[i]; %s b; %s bb[i] = b; }";
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_compute(global %s * aa, global %s * bb) \n"
+			"{                                                            \n"
+			"	const size_t i = get_global_id(0);                       \n"
+			"	const %s a = aa[i];                                      \n"
+			"	%s b;                                                    \n"
+			"	%s                                                       \n"
+			"	bb[i] = b;                                               \n"
+			"}";
 		
 		static cl::Program program[num_ops];
 		static cl::Kernel kernel[num_ops];
@@ -301,7 +323,7 @@ namespace PV {
 			if (T1_str == nullptr || T2_str == nullptr) throw "Unsupported type in computation";
 			const char *op_str = op_to_str[op];
 			//printf("%s\n", op_str);
-			char kernel_code[600];
+			char kernel_code[1500];
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T1_str, T2_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
@@ -319,9 +341,61 @@ namespace PV {
 		event.wait();
 	}
 	
+	template<typename T1, typename T2, typename T3>
+	void parallel_compute(cl::Buffer & aa, const cl::Buffer & bb, cl::Buffer & cc, size_type size, enum operation op) {
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_compute(global %s * aa, global %s * bb, global %s * cc) \n"
+			"{                                      \n"
+			"	const size_t i = get_global_id(0); \n"
+			"	const %s a = aa[i];                \n"
+			"	const %s b = bb[i];                \n"
+			"	%s c;                              \n"
+			"	%s                                 \n"
+			"	cc[i] = c;                         \n"
+			"}";
+		
+		static cl::Program program[num_ops];
+		static cl::Kernel kernel[num_ops];
+		static bool initialized[num_ops];
+		cl_int err = CL_SUCCESS;
+		if (!initialized[op]) {
+			const char *T1_str = typeToStr<T1>();
+			const char *T2_str = typeToStr<T2>();
+			const char *T3_str = typeToStr<T3>();
+			if (T1_str == nullptr || T2_str == nullptr || T3_str == nullptr) throw "Unsupported type in computation";
+			const char *op_str = op_to_str[op];
+			//printf("%s\n", op_str);
+			char kernel_code[1500];
+			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T1_str, T2_str, T3_str, op_str);
+			try {
+				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
+				program[op].build();
+			} catch (cl::Error & err) {
+				throw "Error encountered during OpenCL compilation";
+			}
+			kernel[op] = cl::Kernel(program[op], "opencl_compute");
+			initialized[op] = true;
+		}
+		
+		cl::CommandQueue queue = cl.get_GPU_queue();
+		cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer>(kernel[op]))(cl::EnqueueArgs(queue, cl::NDRange(size)), aa, bb, cc);
+		event.wait();
+	}
+	
 	template<typename T1, typename T2, typename T3, typename T4>
 	void parallel_compute(cl::Buffer & aa, const cl::Buffer & bb, const cl::Buffer & cc, cl::Buffer & dd, size_type size, enum operation op) {
-		static const char* const starting_kernel_code = "__kernel void opencl_compute(global %s * aa, global %s * bb, global %s * cc, global %s * dd) { const size_t i = get_global_id(0); const %s a = aa[i]; const %s b = bb[i]; const %s c = cc[i]; %s d; %s dd[i] = d; }";
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_compute(global %s * aa, global %s * bb, global %s * cc, global %s * dd) \n"
+			"{                                      \n"
+			"	const size_t i = get_global_id(0); \n"
+			"	const %s a = aa[i];                \n"
+			"	const %s b = bb[i];                \n"
+			"	const %s c = cc[i];                \n"
+			"	%s d;                              \n"
+			"	%s                                 \n"
+			"	dd[i] = d;                         \n"
+			"}";
 		
 		static cl::Program program[num_ops];
 		static cl::Kernel kernel[num_ops];
@@ -335,7 +409,7 @@ namespace PV {
 			if (T1_str == nullptr || T2_str == nullptr || T3_str == nullptr || T4_str == nullptr) throw "Unsupported type in computation";
 			const char *op_str = op_to_str[op];
 			//printf("%s\n", op_str);
-			char kernel_code[700];
+			char kernel_code[1500];
 			sprintf(kernel_code, starting_kernel_code, T1_str, T2_str, T3_str, T4_str, T1_str, T2_str, T3_str, T4_str, op_str);
 			try {
 				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
@@ -353,8 +427,175 @@ namespace PV {
 		event.wait();
 	}
 	
+	template<typename T>
+	T parallel_reduce(cl::Buffer & aa, size_type size, enum reduce_operation op) {
+		const unsigned reduction_amount = 64;
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_reduce(__global %s *aa, __global %s *rr, __const size_t stride, __const size_t size) \n"
+			"{                                                            \n"
+			"	const size_t start = get_global_id(0);                   \n"
+			"	%s accum = aa[start];                                    \n"
+			"	for(size_t i = start + stride; i < size; i += stride) {  \n"
+			"		accum %s aa[i];                                     \n"
+			"	}                                                        \n"
+			"	rr[start] = accum;                                       \n"
+			"}";
+		static cl::Program program[num_reduce_ops];
+		static cl::Kernel kernel[num_reduce_ops];
+		static bool initialized[num_reduce_ops];
+		cl_int err = CL_SUCCESS;
+		if (!initialized[op]) {
+			const char *T_str = typeToStr<T>();
+			if (T_str == nullptr) throw "Unsupported type in computation";
+			const char* op_str = reduce_op_to_str[op];
+			//printf("%s\n", op_str);
+			char kernel_code[700];
+			sprintf(kernel_code, starting_kernel_code, T_str, T_str, T_str, op_str);
+			try {
+				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
+				program[op] = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
+				program[op].build();
+			} catch (cl::Error & err) {
+				throw "Error encountered during OpenCL compilation";
+			}
+			kernel[op] = cl::Kernel(program[op], "opencl_reduce");
+			initialized[op] = true;
+		}
+		
+		cl::CommandQueue queue = cl.get_GPU_queue();
+		
+		cl::Buffer in_buf = aa, out_buf;
+		size_type reduced_size, last_size = size;
+		for (reduced_size = size / reduction_amount; reduced_size > 10000; reduced_size /= reduction_amount) {
+			out_buf = cl.GPU_buffer<T>(reduced_size);
+			cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, const size_t, const size_t>(kernel[op]))(cl::EnqueueArgs(queue, cl::NDRange(reduced_size)), in_buf, out_buf, reduced_size, last_size);
+			event.wait();
+			in_buf = out_buf;
+			last_size = reduced_size;
+		}
+		std::vector<T> partial_results(last_size);
+		cl.from_GPU_buffer(in_buf, 0, partial_results);
+		T result = partial_results[0];
+		for (size_type i = 1; i < last_size; ++i) {
+			if (op == reduce_plus) {result += partial_results[i];}
+			else {result *= partial_results[i];}
+		}
+		return result;
+	}
+	
+	template<typename T>
+	size_type parallel_filter(cl::Buffer & nums, const cl::Buffer & bools, cl::Buffer & results, size_type size) {
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_filter(__global %s *nums, __global bool *bools, __global %s *result, __global unsigned int *current_size) \n"
+			"{                                                             \n"
+			"	const size_t i = get_global_id(0);                        \n"
+			"	if(bools[i]) {                                            \n"
+			"		const unsigned int index = atomic_inc(current_size); \n"
+			"		result[index] = nums[i];                             \n"
+			"	}                                                         \n"
+			"}";
+		static cl::Program program;
+		static cl::Kernel kernel;
+		static bool initialized;
+		cl_int err = CL_SUCCESS;
+		if (!initialized) {
+			const char *T_str = typeToStr<T>();
+			if (T_str == nullptr) throw "Unsupported type in computation";
+			char kernel_code[1000];
+			sprintf(kernel_code, starting_kernel_code, T_str, T_str);
+			try {
+				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
+				program.build();
+			} catch (cl::Error & err) {
+				throw "Error encountered during OpenCL compilation";
+			}
+			kernel = cl::Kernel(program, "opencl_filter");
+			initialized = true;
+		}
+		
+		cl::CommandQueue queue = cl.get_GPU_queue();
+		cl::Buffer size_buffer = cl.GPU_buffer<unsigned int>(1, 0);
+		cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>(kernel))(cl::EnqueueArgs(queue, cl::NDRange(size)), nums, bools, results, size_buffer);
+		event.wait();
+		return cl.get_GPU_buffer_index<unsigned int>(size_buffer, 0);
+	}
+	
+	template<typename T>
+	void parallel_rotate(cl::Buffer & ins, const cl::Buffer & outs, long int rotation, size_type size) {
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_rotate(__global %s *ins, __global %s *outs, __const long int rotation, __const size_t size) \n"
+			"{                                        \n"
+			"	const size_t i = get_global_id(0);   \n"
+			"	outs[(i+rotation) %s size] = ins[i]; \n"
+			"}";
+		static cl::Program program;
+		static cl::Kernel kernel;
+		static bool initialized;
+		cl_int err = CL_SUCCESS;
+		if (!initialized) {
+			const char *T_str = typeToStr<T>();
+			if (T_str == nullptr) throw "Unsupported type in computation";
+			char kernel_code[1000];
+			sprintf(kernel_code, starting_kernel_code, T_str, T_str, "%");
+			try {
+				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
+				program.build();
+			} catch (cl::Error & err) {
+				throw "Error encountered during OpenCL compilation";
+			}
+			kernel = cl::Kernel(program, "opencl_rotate");
+			initialized = true;
+		}
+		
+		cl::CommandQueue queue = cl.get_GPU_queue();
+		cl::Event event = (cl::make_kernel<cl::Buffer, cl::Buffer, const long int, const size_t>(kernel))(cl::EnqueueArgs(queue, cl::NDRange(size)), ins, outs, rotation, size);
+		event.wait();
+	}
+	
+	template<typename T>
+	void parallel_indices(cl::Buffer & buf, size_type size) {
+		static const char* const starting_kernel_code =
+			"__kernel void opencl_indices(__global %s *buf) \n"
+			"{                                        \n"
+			"	const size_t i = get_global_id(0);   \n"
+			"	buf[i] = i;                          \n"
+			"}";
+		static cl::Program program;
+		static cl::Kernel kernel;
+		static bool initialized;
+		cl_int err = CL_SUCCESS;
+		if (!initialized) {
+			const char *T_str = typeToStr<T>();
+			if (T_str == nullptr) throw "Unsupported type in computation";
+			char kernel_code[500];
+			sprintf(kernel_code, starting_kernel_code, T_str);
+			try {
+				cl::Program::Sources kernel_source(1, std::make_pair(kernel_code,strlen(kernel_code)));
+				program = cl::Program(cl.get_GPU_context(), std::string(kernel_code), false);
+				program.build();
+			} catch (cl::Error & err) {
+				throw "Error encountered during OpenCL compilation";
+			}
+			kernel = cl::Kernel(program, "opencl_indices");
+			initialized = true;
+		}
+		
+		cl::CommandQueue queue = cl.get_GPU_queue();
+		cl::Event event = (cl::make_kernel<cl::Buffer>(kernel))(cl::EnqueueArgs(queue, cl::NDRange(size)), buf);
+		event.wait();
+	}
+	
 	template<class T>
 	class Vector {
+		static_assert(std::is_same<T, bool>::value        || std::is_same<T, char>::value || 
+		              std::is_same<T, signed char>::value || std::is_same<T, unsigned char>::value || 
+		              std::is_same<T, short>::value       || std::is_same<T, uint16_t>::value || 
+		              std::is_same<T, int>::value         || std::is_same<T, unsigned int>::value || 
+		              std::is_same<T, long>::value        || std::is_same<T, unsigned long>::value || 
+		              std::is_same<T, long long>::value   || std::is_same<T, unsigned long long>::value || 
+		              std::is_same<T, float>::value, "Unsupported ParallelVector datatype");
 		public:
 			// CONSTRUCTORS
 			// default constructor
@@ -367,7 +608,7 @@ namespace PV {
 			// range constructors
 			template<class input_iterator_type>
 			//typedef typename std::iterator<std::input_iterator_tag, T> input_iterator_type;
-			Vector(input_iterator_type start, input_iterator_type end) : data(cl.GPU_buffer<input_iterator_type>(start, end)), num_filled(end-start), num_allocated(end-start), initialized(true) {};
+			Vector(input_iterator_type begin, input_iterator_type end) : data(cl.GPU_buffer_iter(begin, end)), num_filled(end-begin), num_allocated(end-begin), initialized(true) {};
 			Vector(T* data_in, size_type length) : data(cl.GPU_buffer(data_in, length)), num_filled(length), num_allocated(length), initialized(true) {};
 			
 			// copy constructors
@@ -379,30 +620,65 @@ namespace PV {
 					num_allocated = vec.num_allocated;
 				}
 			};
-			Vector(const std::vector<T>& vec) : data(cl.GPU_buffer(vec.begin(), vec.end())), num_filled(vec.size()), num_allocated(vec.size()), initialized(true) {};
+			Vector(const std::vector<T>& vec) : data(cl.GPU_buffer_iter(vec.begin(), vec.end())), num_filled(vec.size()), num_allocated(vec.size()), initialized(true) {};
 			
 			// move constructor
 			Vector(const Vector&& vec) : data(cl.move_buffer<T>(vec.data)), num_filled(vec.num_filled), num_allocated(vec.num_allocated), initialized(vec.initialized) {};
 			
-			
 			// OPERATORS
 			// data accessor(s)
+			// accessor
 			T operator[] (size_type index) {
 				if (!initialized) throw "Vector not initialized";
 				return cl.get_GPU_buffer_index<T>(data, index);
 			}
-			T at(size_type index) {
+			// getters
+			T get(size_type index) {
 				if (!initialized) throw "Vector not initialized";
 				if (index < num_filled) {
 					return cl.get_GPU_buffer_index<T>(data, index);
 				} else throw "index out of range";
 			}
+			void get(size_type start_index, T* data_in, size_type length) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + length > num_filled) throw  "cannot get indices beyond end of Vector";
+				cl.from_GPU_buffer(data, start_index, data_in, length);
+			}
+			void get(size_type start_index, std::vector<T> & vec) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + vec.size() > num_filled) throw  "cannot get indices beyond end of Vector";
+				cl.from_GPU_buffer(data, start_index, vec);
+			}
+			template<class iterator_type>
+			void get(size_type start_index, iterator_type begin, iterator_type end) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + (end-begin) > num_filled) throw  "cannot get indices beyond end of Vector";
+				cl.from_GPU_buffer(data, start_index, begin, end);
+			}
+			// setters
 			void set(size_type index, T val) {
 				if (!initialized) throw "Vector not initialized";
 				if (index < num_filled) {
 					cl.set_GPU_buffer_index<T>(data, index, val);
 				} else throw "index out of range";
 			}
+			void set(size_type start_index, T* data_in, size_type length) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + length > num_filled) throw  "cannot set indices beyond end of Vector";
+				cl.to_GPU_buffer(data, start_index, data_in, length);
+			}
+			void set(size_type start_index, std::vector<T> & vec) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + vec.size() > num_filled) throw  "cannot set indices beyond end of Vector";
+				cl.to_GPU_buffer(data, start_index, vec);
+			}
+			template<class iterator_type>
+			void set(size_type start_index, iterator_type begin, iterator_type end) {
+				if (!initialized) throw "Vector not initialized";
+				if (start_index + (end-begin) > num_filled) throw  "cannot set indices beyond end of Vector";
+				cl.to_GPU_buffer(data, start_index, begin, end);
+			}
+			
 			
 			// arithmetic operators
 			// plus
@@ -612,6 +888,37 @@ namespace PV {
 				return output;
 			}
 			
+			// REDUCTIONS
+			// sum
+			T sum() {
+				if (!initialized) throw "Vector not initialized";
+				return parallel_reduce<T>(data, num_filled, reduce_plus);
+			}
+			
+			// product
+			T product() {
+				if (!initialized) throw "Vector not initialized";
+				return parallel_reduce<T>(data, num_filled, reduce_times);
+			}
+			
+			Vector<T> filterBy(const Vector<bool> & vec) {
+				if (!initialized || !vec.initialized) throw "Vector not initialized";
+				if (size() != vec.size()) throw "Vector size mismatch";
+				Vector<T> output(size());
+				output.num_filled = parallel_filter<T>(data, vec.data, output.data, size());
+				return output;
+			}
+			
+			// ROTATIONS
+			Vector<T> rotateBy(long int rotation) {
+				long int final_rotation = rotation % (long int)size();
+				// guarantee rotation is between 0 and size - 1
+				if (final_rotation < 0) final_rotation += size();
+				Vector<T> output(size());
+				parallel_rotate<T>(data, output.data, final_rotation, size());
+				return output;
+			}
+			
 			// OTHER METHODS
 			// get size of vector
 			size_type size() const {
@@ -657,6 +964,10 @@ namespace PV {
 				if (!initialized) throw "Vector not initialized";
 				if (num_filled > 0) --num_filled;
 			}
+			
+			
+			
+			cl::Buffer data;
 		protected:
 			// so we can access protected methods accross templates
 			template<typename U>
@@ -664,18 +975,21 @@ namespace PV {
 			
 			template<typename T1, typename T2, typename T3, typename T4>
 			void do_operation(Vector<T1> & a, const Vector<T2> & b, const Vector<T3> & c, Vector<T4> & d, enum operation op) {
+				if (!a.initialized || !b.initialized || !c.initialized || !d.initialized) throw "Vector not initialized";
 				if (a.size() != b.size() || b.size() != c.size() || c.size() != d.size()) throw "Vector size mismatch";
 				parallel_compute<T1, T2, T3, T4>(a.data, b.data, c.data, d.data, a.size(), op);
 			}
 			
 			template<typename T1, typename T2, typename T3>
 			void do_operation(Vector<T1> & a, const Vector<T2> & b, Vector<T3> & c, enum operation op) {
+				if (!a.initialized || !b.initialized || !c.initialized) throw "Vector not initialized";
 				if (a.size() != b.size() || b.size() != c.size()) throw "Vector size mismatch";
 				parallel_compute<T1, T2, T3>(a.data, b.data, c.data, a.size(), op);
 			}
 			
 			template<typename T1, typename T2>
 			void do_operation(Vector<T1> & a, Vector<T2> & b, enum operation op) {
+				if (!a.initialized || !b.initialized) throw "Vector not initialized";
 				if (a.size() != b.size()) throw "Vector size mismatch";
 				parallel_compute<T1, T2>(a.data, b.data, a.size(), op);
 			}
@@ -696,9 +1010,15 @@ namespace PV {
 				data = buf;
 			}
 			
-			cl::Buffer data;
 			size_type num_filled, num_allocated;
 			bool initialized;
 			const size_type init_size = 8;
 	};
+	
+	template<typename T>
+	Vector<T> indices_Vector(size_type size) {
+		Vector<T> output(size);
+		parallel_indices<T>(output.data, size);
+		return output;
+	}
 }

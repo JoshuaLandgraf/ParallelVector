@@ -1,4 +1,4 @@
-// Example program that uses ParallelVector to do some simple computations
+// Example program that tests various ParallelVector operations
 
 #include <iostream>
 #include <vector>
@@ -7,15 +7,18 @@
 
 int main(int argc, char *argv[]) {
 	try {
-		const unsigned test_size = 1000000;
+		const unsigned test_size = 25000000;
 		
-		// test constructors
+		// test constructors, getters, and setters
 		{
+			std::vector<int> nums(test_size, 1);
+			std::vector<int> nums2(test_size);
+			
+			// constructors
 			PV::Vector<int> test1 = PV::Vector<int>();
 			PV::Vector<int> test2(test_size);
 			PV::Vector<int> test3(test_size, 0);
 			assert(test3[0] == 0);
-			std::vector<int> nums(test_size, 1);
 			PV::Vector<int> test4(nums.begin(), nums.end());
 			assert(test4[1] == 1);
 			PV::Vector<int> test5(&nums[0], nums.size());
@@ -25,6 +28,26 @@ int main(int argc, char *argv[]) {
 			PV::Vector<int> test7(nums);
 			PV::Vector<int> test8(test7);
 			assert(test8[4] == 1);
+			
+			// getters
+			assert(test3.get(0) == 0);
+			test4.get(0, nums2.begin(), nums2.begin()+1);
+			assert(nums2[0] == 1);
+			test4.get(1, &nums2[1], 1);
+			assert(nums2[1] == 1);
+			test4.get(0, nums2);
+			assert(nums2[2] == 1);
+			
+			// setters
+			PV::Vector<int> test9(test_size);
+			test9.set(0, 1);
+			assert(test9[0] == 1);
+			test9.set(1, nums.begin(), nums.begin()+1);
+			assert(test9[1] == 1);
+			test9.set(2, &nums[0], 1);
+			assert(test9[2] == 1);
+			test9.set(0, nums);
+			assert(test9[3] == 1);
 		}
 		
 		// test operations on numbers
@@ -124,22 +147,95 @@ int main(int argc, char *argv[]) {
 			assert(test3[2] == true);
 		}
 		
-		// test operations on datatypes?
+		// test operations on datatypes
+		{
+			PV::Vector<bool> test1(test_size, true);
+			test1 &= test1;
+			assert(test1[0] == true);
+			PV::Vector<char> test2(test_size, 1);
+			test2 += test2;
+			assert(test2[1] == 2);
+			PV::Vector<signed char> test3(test_size, 1);
+			test3 += test3;
+			assert(test3[2] == 2);
+			PV::Vector<unsigned char> test4(test_size, 1);
+			test4 += test4;
+			assert(test4[3] == 2);
+			PV::Vector<short> test5(test_size, 1);
+			test5 += test5;
+			assert(test5[4] == 2);
+			PV::Vector<uint16_t> test6(test_size, 1);
+			test6 += test6;
+			assert(test6[5] == 2);
+			PV::Vector<int> test7(test_size, 1);
+			test7 += test7;
+			assert(test7[6] == 2);
+			PV::Vector<unsigned int> test8(test_size, 1);
+			test8 += test8;
+			assert(test8[7] == 2);
+			PV::Vector<long> test9(test_size, 1);
+			test9 += test9;
+			assert(test9[8] == 2);
+			PV::Vector<unsigned long> test10(test_size, 1);
+			test10 += test10;
+			assert(test10[9] == 2);
+			PV::Vector<long long> test11(test_size, 1);
+			test11 += test11;
+			assert(test11[10] == 2);
+			PV::Vector<unsigned long long> test12(test_size, 1);
+			test12 += test12;
+			assert(test12[11] == 2);
+			PV::Vector<float> test13(test_size, 1);
+			test13 -= test13;
+			assert(test13[12] == 0);
+		}
+		
+		// test reductions and rotations
+		{
+			PV::Vector<int> zeros(test_size, 0);
+			PV::Vector<int> ones(test_size, 1);
+			PV::Vector<int> twos(test_size, 2);
+			PV::Vector<float> not_ones(test_size, 1.0000001);
+			
+			// sum and product
+			assert(ones.sum() == test_size);
+			assert(not_ones.product() > 1.0000001);
+			
+			// filter
+			PV::Vector<int> nums(test_size, 5);
+			nums.set(0,0);
+			nums.set(1,1);
+			nums.set(2,2);
+			nums.set(3,3);
+			PV::Vector<int> evens = nums.filterBy(nums % twos == zeros);
+			assert(evens.size() == 2);
+			assert(evens.sum() == 2);
+			
+			// rotate
+			nums.set(nums.size()-1,4);
+			PV::Vector<int> rotated_nums1 = nums.rotateBy(1);
+			PV::Vector<int> rotated_nums2 = nums.rotateBy(-1);
+			assert(rotated_nums1[0] == 4);
+			assert(rotated_nums1[1] == 0);
+			assert(rotated_nums2.back() == 0);
+			assert(rotated_nums2[0] == 1);
+		}
 		
 		// test other operations
 		{
+			PV::Vector<int> indices = PV::indices_Vector<int>(test_size);
+			assert(indices[0] == 0);
+			assert(indices[1] == 1);
+			assert(indices.back() == indices.size()-1);
 			PV::Vector<int> nums(test_size);
 			assert(nums.size() == test_size);
 			nums.set(0,1);
 			assert(nums[0] == 1);
-			assert(nums.at(0) == 1);
 			nums.reserve(test_size+1);
 			nums.resize(test_size+1);
 			assert(nums[0] == 1);
-			assert(nums.at(0) == 1);
 			nums.set(test_size,2);
 			assert(nums[test_size] == 2);
-			assert(nums.at(test_size) == 2);
 			assert(nums.front() == 1);
 			assert(nums.back() == 2);
 			nums.pop_back();
@@ -147,6 +243,7 @@ int main(int argc, char *argv[]) {
 			nums.push_back(3);
 			assert(nums.size() == test_size + 1);
 			assert(nums.back() == 3);
+
 		}
 		
 	} catch (char const * error) {
@@ -154,5 +251,5 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 	
-	printf("Tests completed successfully!\n");
+	printf("All tests completed successfully!\n");
 }
