@@ -5,9 +5,9 @@ A C++ library / DSL for vector parallelism through OpenCL.
 ## Installing and building
 
 #### Download ParallelVector
-
-  git clone https://github.com/JoshuaLandgraf/ParallelVector.git
-
+```
+git clone https://github.com/JoshuaLandgraf/ParallelVector.git
+```
 ### Install OpenCL and Build
 
 #### OS X
@@ -21,9 +21,10 @@ OpenCL drivers are easily available from [Intel](https://software.intel.com/en-u
 ### Running and Debugging Programs
 
 Examplpe programs can be run (on OS X and Linux) with
-
-  ./test
-  ./kmeans
-  ./keys
+```
+./test
+./kmeans
+./keys
+```
 
 For extra OpenCL debgging info, adding `CL_LOG_ERRORS=stdout` before running the command can reveal more specific errors about which part of the implmenetation is breaking and what went wrong.
