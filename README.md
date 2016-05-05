@@ -46,57 +46,66 @@ For extra OpenCL debgging info, adding `CL_LOG_ERRORS=stdout` before running the
 
 #### Operators
 
-| Operator                             | Description                                                                                   | Special Notes                                    |
-|--------------------------------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------|
-| `Vector[index]`                      | Returns value at index                                                                        | Value is not a reference                         |
-| `Vector.get(index)`                  | Returns value at index                                                                        | Value is not a reference                         |
-| `Vector.get(index, pointer, length)` | Copies `length` elements starting at `index`to `pointer`                                      |                                                  |
-| `Vector.get(index, vector)`          | Copies `length` elements starting at `index`into `std::vector`                                |                                                  |
-| `Vector.get(index, begin, end)`      | Copies elements starting at `index` into iterators                                            |                                                  |
-| `Vector.set(index, value)`           | Sets element `index` to `value`                                                               |                                                  |
-| `Vector.set(index, pointer, length)` | Copies `length` elements from `pointer` into Vector                                           | `Index` specifies where to start in Vector       |
-| `Vector.set(index, vector)`          | Copies `length` elements from `std::vector` into Vector                                       | `Index` specifies where to start in Vector       |
-| `Vector.set(index, begin, end)`      | Copies `length` elements from iterators into Vector                                           |                                                  |
-| `Vector + Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector += Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector - Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector -= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector * Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector *= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector / Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector /= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector % Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector %= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector++`                           | Self-explanatory                                                                              | Returns copy of original Vector                  |
-| `++Vector`                           | Self-explanatory                                                                              |                                                  |
-| `Vector--`                           | Self-explanatory                                                                              | Returns copy of original Vector                  |
-| `--Vector`                           | Self-explanatory                                                                              |                                                  |
-| `-Vector`                            | Returns negated Vector                                                                        |                                                  |
-| `Vector == Vector`                   | Self-explanatory                                                                              |                                                  |
-| `Vector != Vector`                   | Self-explanatory                                                                              |                                                  |
-| `Vector > Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector >= Vector`                   | Self-explanatory                                                                              |                                                  |
-| `Vector < Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector <= Vector`                   | Self-explanatory                                                                              |                                                  |
-| `Vector && Vector`                   | Self-explanatory                                                                              | No short-circuiting                              |
-| `Vector || Vector`                   | Self-explanatory                                                                              | No short-circuiting                              |
-| `!Vector`                            | Returns logical not of original vector                                                        |                                                  |
-| `Vector & Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector &= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector | Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector |= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `Vector ^ Vector`                    | Self-explanatory                                                                              |                                                  |
-| `Vector ^= Vector`                   | Self-explanatory                                                                              | No return value                                  |
-| `~Vector`                            | Returns bit-flipped Vector                                                                    |                                                  |
-| `Vector << Vector`                   | Self-explanatory                                                                              |                                                  |
-| `Vector <<= Vector`                  | Self-explanatory                                                                              | No return value                                  |
-| `Vector >>= Vector`                  | Self-explanatory                                                                              |                                                  |
-| `Vector >>= Vector`                  | Self-explanatory                                                                              | No return value                                  |
-| `Vector.choose(Vector, Vector)`      | Returns ternary operator of the Vectors Think of `A.choose(B,C)` as `A ? B : C`               |                                                  |
-| `Vector.sum()`                       | Returns sum of elements in Vector                                                             | Requires non-empty Vector                        |
-| `Vector.product()`                   | Returns product of elements in Vector                                                         | Requires non-empty Vector                        |
-| `Vector.filterBy(Vector)`            | Returns elements in first Vector whose corresponding elements in the second Vector are `true` | Result Vector can be empty                       |
-| `Vector.rotateBy(rotation)`          | Moves elements to the right by `rotation`                                                     | Negative values rotate left Elements wrap around |
+| Operator                             | Description                                                                                   | Special Notes                                            |
+|--------------------------------------|-----------------------------------------------------------------------------------------------|----------------------------------------------------------|
+| `Vector[index]`                      | Returns value at index                                                                        | Value is not a reference                                 |
+| `Vector.front()`                     | Returns first element in Vector                                                               | Value is not a reference                                 |
+| `Vector.back()`                      | Returns last element in Vector                                                                | Value is not a reference                                 |
+| `Vector.get(index)`                  | Returns value at index                                                                        | Value is not a reference                                 |
+| `Vector.get(index, pointer, length)` | Copies `length` elements starting at `index`to `pointer`                                      |                                                          |
+| `Vector.get(index, vector)`          | Copies `length` elements starting at `index`into `std::vector`                                |                                                          |
+| `Vector.get(index, begin, end)`      | Copies elements starting at `index` into iterators                                            |                                                          |
+| `Vector.set(index, value)`           | Sets element `index` to `value`                                                               |                                                          |
+| `Vector.set(index, pointer, length)` | Copies `length` elements from `pointer` into Vector                                           | `Index` specifies where to start in Vector               |
+| `Vector.set(index, vector)`          | Copies `length` elements from `std::vector` into Vector                                       | `Index` specifies where to start in Vector               |
+| `Vector.set(index, begin, end)`      | Copies `length` elements from iterators into Vector                                           |                                                          |
+| `Vector.push_back(values)`           | Adds `value` to the end of the Vector                                                         | Changes Vector size Potentially very expensive operation |
+| `Vector.pop_back()`                  | Removes last element from Vector                                                              | Changes Vector size                                      |
+| `Vector + Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector += Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector - Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector -= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector * Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector *= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector / Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector /= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector % Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector %= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector++`                           | Self-explanatory                                                                              | Returns copy of original Vector                          |
+| `++Vector`                           | Self-explanatory                                                                              |                                                          |
+| `Vector--`                           | Self-explanatory                                                                              | Returns copy of original Vector                          |
+| `--Vector`                           | Self-explanatory                                                                              |                                                          |
+| `-Vector`                            | Returns negated Vector                                                                        |                                                          |
+| `Vector == Vector`                   | Self-explanatory                                                                              |                                                          |
+| `Vector != Vector`                   | Self-explanatory                                                                              |                                                          |
+| `Vector > Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector >= Vector`                   | Self-explanatory                                                                              |                                                          |
+| `Vector < Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector <= Vector`                   | Self-explanatory                                                                              |                                                          |
+| `Vector && Vector`                   | Self-explanatory                                                                              | No short-circuiting                                      |
+| `Vector || Vector`                   | Self-explanatory                                                                              | No short-circuiting                                      |
+| `!Vector`                            | Returns logical not of original vector                                                        |                                                          |
+| `Vector & Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector &= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector | Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector |= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `Vector ^ Vector`                    | Self-explanatory                                                                              |                                                          |
+| `Vector ^= Vector`                   | Self-explanatory                                                                              | No return value                                          |
+| `~Vector`                            | Returns bit-flipped Vector                                                                    |                                                          |
+| `Vector << Vector`                   | Self-explanatory                                                                              |                                                          |
+| `Vector <<= Vector`                  | Self-explanatory                                                                              | No return value                                          |
+| `Vector >>= Vector`                  | Self-explanatory                                                                              |                                                          |
+| `Vector >>= Vector`                  | Self-explanatory                                                                              | No return value                                          |
+| `Vector.choose(Vector, Vector)`      | Returns ternary operator of the Vectors Think of `A.choose(B,C)` as `A ? B : C`               |                                                          |
+| `Vector.sum()`                       | Returns sum of elements in Vector                                                             | Requires non-empty Vector                                |
+| `Vector.product()`                   | Returns product of elements in Vector                                                         | Requires non-empty Vector                                |
+| `Vector.filterBy(Vector)`            | Returns elements in first Vector whose corresponding elements in the second Vector are `true` | Result Vector can be empty                               |
+| `Vector.rotateBy(rotation)`          | Moves elements to the right by `rotation`                                                     | Negative values rotate left Elements wrap around         |
 
 #### Misc Methods
 
+| Method                   | Description                                                         | Special Notes                                                                   |
+|--------------------------|---------------------------------------------------------------------|---------------------------------------------------------------------------------|
+| `Vector.size()`          | Returns number of elements in Vector                                |                                                                                 |
+| `Vector.resize(length)`  | Changes number of elements in Vector                                | Elements not initialized to any value when growing Vector                       |
+| `Vector.reserve(length)` | Guarantees Vector has allocated enough space for `length` elements  | Does not change Vector size but is useful for improving performance with `push_back()` |
