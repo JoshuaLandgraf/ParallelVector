@@ -49,10 +49,10 @@ For extra OpenCL debgging info, adding `CL_LOG_ERRORS=stdout` before running the
 
 | Operator                             | Description                                                                                   | Special Notes                                            |
 |--------------------------------------|-----------------------------------------------------------------------------------------------|----------------------------------------------------------|
-| `Vector[index]`                      | Returns value at index                                                                        | Value is not a reference                                 |
+| `Vector[index]`                      | Returns value at `index`                                                                      | Value is not a reference                                 |
 | `Vector.front()`                     | Returns first element in Vector                                                               | Value is not a reference                                 |
 | `Vector.back()`                      | Returns last element in Vector                                                                | Value is not a reference                                 |
-| `Vector.get(index)`                  | Returns value at index                                                                        | Value is not a reference                                 |
+| `Vector.get(index)`                  | Returns value at `index`                                                                      | Value is not a reference                                 |
 | `Vector.get(index, pointer, length)` | Copies `length` elements starting at `index`to `pointer`                                      |                                                          |
 | `Vector.get(index, vector)`          | Copies `length` elements starting at `index`into `std::vector`                                |                                                          |
 | `Vector.get(index, begin, end)`      | Copies elements starting at `index` into iterators                                            |                                                          |
