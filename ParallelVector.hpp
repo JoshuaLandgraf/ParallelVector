@@ -828,9 +828,8 @@ namespace PV {
 				return output;
 			}
 			// and equals
-			Vector operator&= (const Vector& vec) {
+			void operator&= (const Vector& vec) {
 				do_operation<T,T,T>(get_this(), vec, get_this(), bitwise_and);
-				return get_this();
 			}
 			// or
 			Vector operator| (const Vector& vec) {
@@ -839,9 +838,8 @@ namespace PV {
 				return output;
 			}
 			// or equals
-			Vector operator|= (const Vector& vec) {
+			void operator|= (const Vector& vec) {
 				do_operation<T,T,T>(get_this(), vec, get_this(), bitwise_or);
-				return get_this();
 			}
 			// xor
 			Vector operator^ (const Vector& vec) {
@@ -850,9 +848,8 @@ namespace PV {
 				return output;
 			}
 			// xor equals
-			Vector operator^= (const Vector& vec) {
+			void operator^= (const Vector& vec) {
 				do_operation<T,T,T>(get_this(), vec, get_this(), bitwise_xor);
-				return get_this();
 			}
 			// not
 			Vector operator~ () {
@@ -867,9 +864,8 @@ namespace PV {
 				return output;
 			}
 			// shift left equals
-			Vector operator<<= (const Vector& vec) {
+			void operator<<= (const Vector& vec) {
 				do_operation<T,T,T>(get_this(), vec, get_this(), left_shift);
-				return get_this();
 			}
 			// shift right
 			Vector operator>> (const Vector& vec) {
@@ -878,9 +874,8 @@ namespace PV {
 				return output;
 			}
 			// shift right equals
-			Vector operator>>= (const Vector& vec) {
+			void operator>>= (const Vector& vec) {
 				do_operation<T,T,T>(get_this(), vec, get_this(), right_shift);
-				return get_this();
 			}
 			
 			// ternary / choose operation
