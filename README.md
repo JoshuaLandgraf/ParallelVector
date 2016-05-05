@@ -8,6 +8,9 @@ A C++ library / DSL for vector parallelism through OpenCL.
 ```
 git clone https://github.com/JoshuaLandgraf/ParallelVector.git
 ```
+
+Note that this already includes the Khronos OpenCL C++ API (`cl.hpp`) that is required by the ParallelVector header library. While this can be downloaded directly fron Khronos [here](https://www.khronos.org/registry/cl/api/1.2/cl.hpp), I have made some small modifications to fix some problems that prevented the code from compiling.
+
 #### Install OpenCL and Build
 
 ##### OS X
@@ -29,7 +32,11 @@ Examplpe programs can be run (on OS X and Linux) with
 
 For extra OpenCL debgging info, adding `CL_LOG_ERRORS=stdout` before running the command can reveal more specific errors about which part of the implmenetation is breaking and what went wrong.
 
-##Coding in ParallelVector
+## Coding in ParallelVector
+
+#### Includes
+
+ParallelVector is enabled by including the header file (`ParallelVector.hpp`) in your C++ code. Note that `ParallelVector.hpp` requires `cl.hpp` to be present in the same folder as itself However, this can easily be changed by modifying the include near the beginning of `ParallelVector.hpp`.
 
 #### Constructors
 
