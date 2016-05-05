@@ -33,16 +33,17 @@ For extra OpenCL debgging info, adding `CL_LOG_ERRORS=stdout` before running the
 
 #### Constructors
 
-| Constructor   | Code                            | Description                                       |
-|---------------|---------------------------------|---------------------------------------------------|
-| Default       | `PV::Vector()`                  | Uninitialized Vector                              |
-| Allocation    | `PV::Vector(length)`            | Space for `length` elements                       |
-| Fill          | `PV::Vector(length, value)`     | Initializes all `length` elements to `value`      |
-| Range         | `PV::Vector(begin, end)`        | Initializes Vector with data from iterators       |
-| Range         | `PV::Vector(pointer, length)`   | Initializes Vector with data from pointer         |
-| Copy          | `PV::Vector(Vector)`            | Initializes Vector with data from Vector          |
-| `std::vector` | `PV::Vector(vector)`            | Initializes Vector with data from a `std::vector` |
-| Move          | `PV::Vector(std::move(Vector))` | Moves Vector into constructed Vector              |
+| Constructor   | Code                               | Description                                       |
+|---------------|------------------------------------|---------------------------------------------------|
+| Default       | `PV::Vector<T>()`                  | Uninitialized Vector                              |
+| Allocation    | `PV::Vector<T>(length)`            | Space for `length` elements                       |
+| Fill          | `PV::Vector<T>(length, value)`     | Initializes all `length` elements to `value`      |
+| Range         | `PV::Vector<T>(begin, end)`        | Initializes Vector with data from iterators       |
+| Range         | `PV::Vector<T>(pointer, length)`   | Initializes Vector with data from pointer         |
+| Copy          | `PV::Vector<T>(Vector)`            | Initializes Vector with data from Vector          |
+| `std::vector` | `PV::Vector<T>(vector)`            | Initializes Vector with data from a `std::vector` |
+| Move          | `PV::Vector<T>(std::move(Vector))` | Moves Vector into constructed Vector              |
+| Indices       | `PV::indices_Vector<T>(length)`    | Returns Vector with values 0 through `length-1`   |
 
 #### Operators
 
